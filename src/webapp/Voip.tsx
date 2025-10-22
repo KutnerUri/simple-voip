@@ -1,9 +1,13 @@
 import { Button } from "./atoms/Button";
 import { ConnectionStatus } from "./components/ConnectionStatus";
 import { useVoip } from "./hooks/useVoip";
+import type { VoipPeer } from "./core/Voip";
+import { PeerIndicator } from "./components/PeerIndicator";
+import { VolumeIndicator } from "./components/VolumeIndicator";
 
 export function Voip() {
-  const { streams, error, ws, pc, wsState, connect, disconnect } = useVoip();
+  const { peers, error, ws, pc, wsState, local, connect, disconnect } =
+    useVoip();
 
   return (
     <div className="mt-8 mx-auto w-full max-w-2xl text-left flex flex-col gap-4">
@@ -18,23 +22,24 @@ export function Voip() {
             className="w-full"
             disabled={wsState === WebSocket.CONNECTING}
           >
-            {wsState === WebSocket.CONNECTING
-              ? "connecting…"
-              : "connect"}
+            {wsState === WebSocket.CONNECTING ? "connecting…" : "connect"}
           </Button>
         )}
       </div>
 
-      <ConnectionStatus ws={ws} pc={pc} />
-
-      {error && (
-        <div className="rounded-lg border text-rose-400 border-rose-600/40 bg-rose-900/20 text-rose-200 text-sm p-3">
-          <div className="leading-5">{error}</div>
+      {(local || peers.length > 0) && (
+        <div className="flex flex-wrap items-center gap-3">
+          {local && (
+            <PeerIndicator peer={{ id: "local", stream: local }} label="You" />
+          )}
+          {peers.map((p: VoipPeer) => (
+            <PeerIndicator key={p.id} peer={p} />
+          ))}
         </div>
       )}
 
       <>
-        {streams.map((stream) => (
+        {peers.map(({ stream }) => (
           <audio
             key={stream.id}
             autoPlay
@@ -46,6 +51,14 @@ export function Voip() {
           />
         ))}
       </>
+
+      <ConnectionStatus ws={ws} pc={pc} />
+
+      {error && (
+        <div className="rounded-lg border text-rose-400 border-rose-600/40 bg-rose-900/20 text-rose-200 text-sm p-3">
+          <div className="leading-5">{error}</div>
+        </div>
+      )}
     </div>
   );
 }

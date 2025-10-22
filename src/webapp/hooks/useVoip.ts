@@ -1,26 +1,31 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Voip as VoipClient } from "../core/Voip";
+import type { VoipPeer } from "../core/Voip";
 
 export type UseVoip = {
-  streams: MediaStream[];
+  peers: VoipPeer[];
   error: string;
   ws: WebSocket | null;
   pc: RTCPeerConnection | null;
   wsState: number | null;
+  local: MediaStream | null;
   connect: () => Promise<void>;
   disconnect: () => void;
 };
 
 export function useVoip(): UseVoip {
-  const [streams, setStreams] = useState<MediaStream[]>([]);
+  const [peers, setPeers] = useState<VoipPeer[]>([]);
   const [error, setError] = useState<string>("");
   const [wsState, setWsState] = useState<number | null>(null);
+  const [local, setLocal] = useState<MediaStream | null>(null);
 
   const clientRef = useRef<VoipClient | null>(null);
 
   const disconnect = useCallback((status: number = WebSocket.CLOSED) => {
     setError("");
     clientRef.current?.disconnect();
+    setLocal(null);
+    setWsState(status);
   }, []);
 
   const connect = useCallback(async () => {
@@ -31,11 +36,12 @@ export function useVoip(): UseVoip {
       // onPeerStateChange: () => {},
       onError: (m, e) =>
         setError(m + (e instanceof Error ? `: ${e.message}` : "")),
-      onStreamChange: setStreams,
+      onPeersChange: setPeers,
     }));
     try {
       await client.connect();
-      await client.startCall();
+      const ls = await client.startCall();
+      setLocal(ls);
     } catch (err) {
       setError(
         "Failed to start call" +
@@ -47,11 +53,12 @@ export function useVoip(): UseVoip {
   useEffect(() => () => disconnect(), [disconnect]);
 
   return {
-    streams,
+    peers,
     error,
     ws: clientRef.current?.socket ?? null,
     pc: clientRef.current?.peer ?? null,
     wsState,
+    local,
     connect,
     disconnect,
   };

@@ -1,3 +1,5 @@
+export type VoipPeer = { id: string; stream: MediaStream };
+
 export type VoipCallbacks = {
   onWsStateChange?: (state: number) => void;
   onPeerStateChange?: (state: {
@@ -6,7 +8,7 @@ export type VoipCallbacks = {
     ice: RTCIceConnectionState;
   }) => void;
   onError?: (message: string, err?: unknown) => void;
-  onStreamChange?: (streams: MediaStream[]) => void;
+  onPeersChange?: (peers: VoipPeer[]) => void;
 };
 
 export type VoipOptions = VoipCallbacks & {
@@ -120,6 +122,7 @@ export class Voip {
         ice: pc.iceConnectionState,
       });
 
+    peerUpdate();
     pc.addEventListener("connectionstatechange", peerUpdate);
     pc.addEventListener("signalingstatechange", peerUpdate);
     pc.addEventListener("iceconnectionstatechange", peerUpdate);
@@ -141,7 +144,9 @@ export class Voip {
       // avoid duplicates on renegotiation
       if (this.streams.some((s) => s.id === stream.id)) return;
       this.streams = [...this.streams, stream];
-      this.opts.onStreamChange?.(this.streams);
+      this.opts.onPeersChange?.(
+        this.streams.map((s) => ({ id: s.id, stream: s }))
+      );
     };
   }
 
@@ -223,7 +228,7 @@ export class Voip {
     } catch {}
     // Clear remote streams and notify; no need to stop remote tracks we didn't start
     this.streams = [];
-    this.opts.onStreamChange?.([]);
+    this.opts.onPeersChange?.([]);
     // Stop local preview stream if tracked
     try {
       this.localStream?.getTracks().forEach((t) => t.stop());

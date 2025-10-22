@@ -1,5 +1,7 @@
-import { serve } from "bun";
+import { serve, type ServerWebSocket } from "bun";
 import index from "./webapp/index.html";
+
+const clients = new Set<ServerWebSocket>();
 
 const server = serve({
   routes: {
@@ -26,6 +28,24 @@ const server = serve({
       return Response.json({
         message: `Hello, ${name}!`,
       });
+    },
+    "/ws": async (req, server) => {
+      if (server.upgrade(req)) return;
+      return new Response("WebSocket signaling server");
+    },
+  },
+  websocket: {
+    open(ws) {
+      clients.add(ws);
+    },
+    message(ws, msg) {
+      // Forward message to everyone except sender
+      for (const client of clients) {
+        if (client !== ws) client.send(msg);
+      }
+    },
+    close(ws) {
+      clients.delete(ws);
     },
   },
 

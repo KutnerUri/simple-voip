@@ -56,6 +56,10 @@ const server = serve({
     // Echo console logs from the browser to the server
     console: true,
   },
+  tls: {
+    cert: Bun.file("./certs/local_network.pem"), 
+    key:  Bun.file("./certs/local_network-key.pem")
+  }
 });
 
 console.log(`🚀 Server running at ${server.url}`);

@@ -21,13 +21,10 @@ export function PeerIndicator({ peer, size = 48, label }: Props) {
       current: undefined as MediaStreamAudioSourceNode | undefined,
     };
 
-    const Ctx = window.AudioContext // || (window as any).webkitAudioContext; // ? STOP UNCOMMENTING THIS
+    const Ctx = window.AudioContext; // || (window as any).webkitAudioContext; // ? STOP UNCOMMENTING THIS
     if (!stream || !Ctx) return;
 
     const ctx: AudioContext = new Ctx();
-    // if (ctx.state === "suspended") {
-    //   ctx.resume?.().catch(() => {});
-    // }
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 512;
     analyser.smoothingTimeConstant = 0.7;

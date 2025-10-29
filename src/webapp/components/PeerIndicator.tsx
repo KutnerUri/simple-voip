@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo } from "react";
+import { useSignal } from "@preact/signals-react";
 import type { VoipPeer } from "../core/Voip";
 import { VolumeIndicator } from "./VolumeIndicator";
 
@@ -11,7 +12,7 @@ type Props = {
 // Simple audio-level driven avatar glow for a peer stream
 export function PeerIndicator({ peer, size = 48, label }: Props) {
   const stream = peer.stream;
-  const [level, setLevel] = useState(0); // measured 0..1
+  const level = useSignal(0);
 
   useEffect(() => {
     const rafRef = { current: undefined as number | undefined };
@@ -50,7 +51,7 @@ export function PeerIndicator({ peer, size = 48, label }: Props) {
       const rms = Math.sqrt(sum / data.length); // 0..1
       // Map to a friendlier curve and clamp
       const val = Math.max(0, Math.min(1, rms * 2));
-      setLevel((prev) => prev * 0.6 + val * 0.4); // smooth
+      level.value = level.value * 0.6 + val * 0.4;
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
@@ -81,5 +82,27 @@ export function PeerIndicator({ peer, size = 48, label }: Props) {
     };
   }, [stream]);
 
-  return <VolumeIndicator level={level} size={size} label={label} />;
+  const rgb = useMemo<[number, number, number]>(() => {
+    if (peer.id === "local") return [59, 130, 246];
+    let hash = 5381;
+    for (let i = 0; i < peer.id.length; i++) {
+      hash = (hash << 5) + hash + peer.id.charCodeAt(i);
+    }
+    const h = (hash >>> 0) % 360;
+    const s = 70;
+    const l = 42;
+    const k = (n: number) => (n + h / 30) % 12;
+    const a = (s / 100) * Math.min(l / 100, 1 - l / 100);
+    const f = (n: number) =>
+      l / 100 - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+    return [
+      Math.round(255 * f(0)),
+      Math.round(255 * f(8)),
+      Math.round(255 * f(4)),
+    ];
+  }, [peer.id]);
+
+  return (
+    <VolumeIndicator levelSignal={level} size={size} label={label} rgb={rgb} />
+  );
 }

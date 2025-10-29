@@ -1,7 +1,8 @@
-import { useMemo, type CSSProperties } from "react";
+import { useRef, type CSSProperties } from "react";
+import { computed, type Signal, useSignalEffect } from "@preact/signals-react";
 
 type Props = {
-  level: number; // 0..1
+  levelSignal: Signal<number>;
   size?: number; // px
   label?: string;
   rgb?: [number, number, number]; // base color, default emerald
@@ -9,27 +10,27 @@ type Props = {
 
 // Pure UI: bottom-heavy volume indicator relying solely on a gradient background.
 export function VolumeIndicator({
-  level,
+  levelSignal,
   size = 48,
   label,
   rgb = [16, 185, 129],
 }: Props) {
-  const clamped = Math.max(0, Math.min(1, level));
-
-  const { fillPercent, colorRgb } = useMemo(() => {
-    const eased = Math.pow(clamped, 0.5); // brighten lower levels a bit
-    const fillPercent = Math.min(100, Math.max(0, 6 + (100 - 6) * eased));
-
-    return { fillPercent, colorRgb: `${rgb[0]}, ${rgb[1]}, ${rgb[2]}` };
-  }, [clamped, rgb]);
-
   const diameter = size;
+  const circleRef = useRef<HTMLDivElement | null>(null);
+  const fillPercent = computed(() => {
+    const clamped = Math.max(0, Math.min(1, levelSignal.value));
+    const eased = Math.pow(clamped, 0.5);
+    return Math.min(100, Math.max(0, 6 + (100 - 6) * eased));
+  });
 
-  const variables = {
-    "--ring-color": `rgba(${colorRgb}, 1)`,
-    "--fill-color-rgb": colorRgb,
-    "--fill-percent": `${fillPercent}%`,
-  } as CSSProperties;
+  const colorRgb = rgb.join(",");
+
+  useSignalEffect(() => {
+    circleRef.current?.style.setProperty(
+      "--fill-percent",
+      `${fillPercent.value}%`,
+    );
+  });
 
   return (
     <div className="flex items-center gap-2">
@@ -40,7 +41,14 @@ export function VolumeIndicator({
         aria-label={label}
       >
         <div
-          style={variables}
+          ref={circleRef}
+          style={
+            {
+              "--ring-color": `rgba(${colorRgb}, 1)`,
+              "--fill-color-rgb": colorRgb,
+              "--fill-percent": "0%",
+            } as CSSProperties
+          }
           className={[
             "h-full w-full rounded-full",
             "bg-[linear-gradient(to_top,rgba(var(--fill-color-rgb),0.32)_0%,rgba(var(--fill-color-rgb),0.6)_var(--fill-percent),transparent_var(--fill-percent),transparent_100%)]",

@@ -16,6 +16,17 @@ export type VoipOptions = VoipCallbacks & {
   rtcConfig?: RTCConfiguration;
 };
 
+const DEFAULT_RTC_CONFIG: RTCConfiguration = {
+  iceServers: [
+    {
+      urls: [
+        "stun:stun.l.google.com:19302",
+        "stun:global.stun.twilio.com:3478",
+      ],
+    },
+  ],
+};
+
 export class Voip {
   private ws: WebSocket | undefined = undefined;
   private pc: RTCPeerConnection | undefined = undefined;
@@ -46,7 +57,8 @@ export class Voip {
 
     const wsUrl = this.opts.wsUrl ?? buildWsUrl("/ws");
     this.ws = new WebSocket(wsUrl);
-    this.pc = new RTCPeerConnection(this.opts.rtcConfig);
+    const rtcConfig = this.opts.rtcConfig ?? DEFAULT_RTC_CONFIG;
+    this.pc = new RTCPeerConnection(rtcConfig);
 
     this.syncWsState();
     this.handleMessages();

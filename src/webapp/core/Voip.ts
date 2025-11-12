@@ -47,9 +47,10 @@ export class Voip {
   }
 
   disconnect(): void {
+    this.sendHangup();
     this.cleanupListeners();
-    this.safeCloseWs();
     this.stopAndClose();
+    this.safeCloseWs();
   }
 
   async connect(): Promise<void> {
@@ -127,12 +128,19 @@ export class Voip {
     const { pc, teardowns } = this;
     if (!pc) throw "this shoudl not happen";
 
-    const peerUpdate = () =>
+    const peerUpdate = (ev?: Event) => {
+      console.log("peer change", ev?.type, pc.connectionState);
+
+      if (["disconnected", "failed", "closed"].includes(pc.connectionState)) {
+        this.clearRemoteStreams();
+      }
+
       this.opts.onPeerStateChange?.({
         connection: pc.connectionState,
         signaling: pc.signalingState,
         ice: pc.iceConnectionState,
       });
+    };
 
     peerUpdate();
     pc.addEventListener("connectionstatechange", peerUpdate);
@@ -156,10 +164,39 @@ export class Voip {
       // avoid duplicates on renegotiation
       if (this.streams.some((s) => s.id === stream.id)) return;
       this.streams = [...this.streams, stream];
-      this.opts.onPeersChange?.(
-        this.streams.map((s) => ({ id: s.id, stream: s }))
-      );
+      this.emitPeers();
     };
+  }
+
+  private emitPeers() {
+    this.opts.onPeersChange?.(
+      this.streams.map((s) => ({ id: s.id, stream: s })),
+    );
+  }
+
+  private removeStreamById(id: string) {
+    const next = this.streams.filter((s) => s.id !== id);
+    if (next.length === this.streams.length) return;
+    this.streams = next;
+    this.emitPeers();
+  }
+
+  private clearRemoteStreams() {
+    if (!this.streams.length) return;
+    this.streams = [];
+    this.emitPeers();
+  }
+
+  private sendHangup() {
+    const { ws, localStream } = this;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+    const payload: { type: "hangup"; streamId?: string } = { type: "hangup" };
+    if (localStream) payload.streamId = localStream.id;
+
+    try {
+      ws.send(JSON.stringify(payload));
+    } catch {}
   }
 
   private handleMessages() {
@@ -168,12 +205,12 @@ export class Voip {
 
     const onMessage = async (e: MessageEvent) => {
       try {
-        const data = JSON.parse((e as MessageEvent<any>).data);
+        const data = JSON.parse(e.data);
         if (typeof data !== "object" || data === null) return;
         if (this.pc?.signalingState === "closed") return;
 
         if ("sdp" in data) {
-          const sdp: RTCSessionDescriptionInit = (data as any).sdp;
+          const sdp: RTCSessionDescriptionInit = data.sdp;
           await pc.setRemoteDescription(sdp);
           if (sdp.type === "offer") {
             const answer = await pc.createAnswer();
@@ -186,8 +223,15 @@ export class Voip {
         if ("candidate" in data) {
           // only add ICE when peer is in a valid state and has remote description
           if (pc.signalingState !== "closed" && pc.remoteDescription) {
-            await pc.addIceCandidate((data as any).candidate);
+            await pc.addIceCandidate(data.candidate);
           }
+          return;
+        }
+
+        if ("type" in data && data.type === "hangup") {
+          const streamId = data.streamId;
+          if (streamId && typeof streamId === "string")
+            this.removeStreamById(streamId);
           return;
         }
       } catch (err) {
@@ -195,9 +239,9 @@ export class Voip {
       }
     };
 
-    ws.addEventListener("message", onMessage as any);
+    ws.addEventListener("message", onMessage);
     return () => {
-      ws.removeEventListener("message", onMessage as any);
+      ws.removeEventListener("message", onMessage);
     };
   }
 
@@ -239,8 +283,7 @@ export class Voip {
       pc.close();
     } catch {}
     // Clear remote streams and notify; no need to stop remote tracks we didn't start
-    this.streams = [];
-    this.opts.onPeersChange?.([]);
+    this.clearRemoteStreams();
     // Stop local preview stream if tracked
     try {
       this.localStream?.getTracks().forEach((t) => t.stop());
@@ -263,7 +306,7 @@ export class Voip {
 }
 
 function assertVoipCapable() {
-  const media = (navigator as any).mediaDevices;
+  const media = navigator.mediaDevices;
   if (!media || typeof media.getUserMedia !== "function") {
     throw new Error("getUserMedia is not available. Use a modern browser.");
   }

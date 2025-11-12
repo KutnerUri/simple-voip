@@ -23,9 +23,10 @@ export function useVoip(): UseVoip {
 
   const disconnect = useCallback((status: number = WebSocket.CLOSED) => {
     setError("");
-    clientRef.current?.disconnect();
+    setPeers([]);
     setLocal(null);
     setWsState(status);
+    clientRef.current?.disconnect();
   }, []);
 
   const connect = useCallback(async () => {

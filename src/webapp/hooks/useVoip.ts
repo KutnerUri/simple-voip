@@ -8,8 +8,11 @@ export type UseVoip = {
   ws: WebSocket | null;
   wsState: number | null;
   local: MediaStream | null;
+  isMuted: boolean;
   connect: () => Promise<void>;
   disconnect: () => void;
+  toggleMute: () => void;
+  openSpeakerSelector: () => void;
 };
 
 export function useVoip(): UseVoip {
@@ -17,6 +20,7 @@ export function useVoip(): UseVoip {
   const [error, setError] = useState<string>("");
   const [wsState, setWsState] = useState<number | null>(null);
   const [local, setLocal] = useState<MediaStream | null>(null);
+  const [muted, setMuted] = useState(false);
 
   const clientRef = useRef<VoipClient | null>(null);
 
@@ -25,6 +29,7 @@ export function useVoip(): UseVoip {
     setPeers([]);
     setLocal(null);
     setWsState(status);
+    setMuted(false);
     clientRef.current?.disconnect();
   }, []);
 
@@ -43,12 +48,29 @@ export function useVoip(): UseVoip {
       await client.connect();
       const ls = await client.startCall();
       setLocal(ls);
+      setMuted(false);
     } catch (err) {
       setError(
         "Failed to start call" +
           (err instanceof Error ? `: ${err.message}` : ""),
       );
     }
+  }, []);
+
+  useEffect(() => {
+    if (!local) return;
+    const enabled = !muted;
+    local.getAudioTracks().forEach((track) => {
+      track.enabled = enabled;
+    });
+  }, [local, muted]);
+
+  const toggleMute = useCallback(() => {
+    setMuted((prev) => !prev);
+  }, []);
+
+  const openSpeakerSelector = useCallback(() => {
+    console.warn("TODO: implement speaker output selection");
   }, []);
 
   useEffect(() => () => disconnect(), [disconnect]);
@@ -59,7 +81,10 @@ export function useVoip(): UseVoip {
     ws: clientRef.current?.socket ?? null,
     wsState,
     local,
+    isMuted: muted,
     connect,
     disconnect,
+    toggleMute,
+    openSpeakerSelector,
   };
 }

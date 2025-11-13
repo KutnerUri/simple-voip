@@ -3,13 +3,27 @@ import { ConnectionStatus } from "./components/ConnectionStatus";
 import { useVoip } from "./hooks/useVoip";
 import type { VoipPeer } from "./core/Voip";
 import { PeerIndicator } from "./components/PeerIndicator";
+import { ConversationControls } from "./components/ConversationControls";
 
 export function Voip() {
-  const { peers, error, ws, wsState, local, connect, disconnect } = useVoip();
+  const {
+    peers,
+    error,
+    ws,
+    wsState,
+    local,
+    connect,
+    disconnect,
+    isMuted,
+    toggleMute,
+    openSpeakerSelector,
+  } = useVoip();
+
+  const inCall = wsState === WebSocket.OPEN;
 
   return (
-    <div className="mt-8 mx-auto w-full max-w-2xl text-left flex flex-col gap-4">
-      <div className="flex gap-2 w-full">
+    <div className="mx-auto mt-8 flex w-full max-w-2xl flex-col gap-4 text-left">
+      <div className="flex w-full gap-2">
         {wsState === WebSocket.OPEN ? (
           <Button onClick={disconnect} className="w-full">
             disconnect
@@ -50,10 +64,19 @@ export function Voip() {
         ))}
       </>
 
+      <ConversationControls
+        local={local}
+        inCall={inCall}
+        isMuted={isMuted}
+        onToggleMute={toggleMute}
+        onDisconnect={disconnect}
+        onOpenSpeaker={openSpeakerSelector}
+      />
+
       <ConnectionStatus ws={ws} />
 
       {error && (
-        <div className="rounded-lg border text-rose-400 border-rose-600/40 bg-rose-900/20 text-rose-200 text-sm p-3">
+        <div className="rounded-lg border border-rose-600/40 bg-rose-900/20 p-3 text-sm text-rose-200 text-rose-400">
           <div className="leading-5">{error}</div>
         </div>
       )}

@@ -2,11 +2,11 @@ DON'T START YET
 
 TODO: 
 - visualization
-    - [ ]drop dead peers
-    - [ ] show state in-peer
+    - [x] drop dead peers
+    - [x] show state in-peer
 - conversation control
-    - [ ] end call button
-    - [ ] mute
+    - [x] end call button
+    - [x] mute
     - [ ] earphone integration
     - [ ] close to the ear mode
 - conversation

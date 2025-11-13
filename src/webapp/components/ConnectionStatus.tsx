@@ -2,14 +2,13 @@ import { useEffect, useRef, useState } from "react";
 
 type Props = {
   ws: WebSocket | null;
-  pc: RTCPeerConnection | null;
   maxItems?: number;
 };
 
-export function ConnectionStatus({ ws, pc, maxItems = 100 }: Props) {
-  const [wsStatus, setWsStatus] = useState<string>(ws ? ws.readyState.toString() : "disconnected");
-  const [pcStatusDetail, setPcStatusDetail] = useState<string>(pc ? pc.connectionState : "n/a");
-  const [pcBase, setPcBase] = useState<string>(pc ? pc.connectionState : "n/a");
+export function ConnectionStatus({ ws, maxItems = 100 }: Props) {
+  const [wsStatus, setWsStatus] = useState<string>(
+    ws ? ws.readyState.toString() : "disconnected",
+  );
   const [feed, setFeed] = useState<string[]>([]);
   const listRef = useRef<HTMLDivElement | null>(null);
 
@@ -45,33 +44,26 @@ export function ConnectionStatus({ ws, pc, maxItems = 100 }: Props) {
     return "text-neutral-300";
   };
 
-  const pcColor = (status: string) => {
-    if (status === "connected") return "text-emerald-400";
-    if (status === "connecting" || status === "checking") return "text-amber-300";
-    if (status === "failed" || status === "disconnected" || status === "closed") return "text-rose-400";
-    return "text-neutral-300";
-  };
-
   useEffect(() => {
     setWsStatus(ws ? wsReadyState(ws.readyState) : "disconnected");
     if (!ws) return;
 
-    const handleOpen = () => setWsStatus("open");
-    const handleClose = () => setWsStatus("closed");
-    const handleError = () => setWsStatus("error");
-
-    ws.addEventListener("open", () => {
-      handleOpen();
+    const handleOpen = () => {
+      setWsStatus("open");
       push("WS: open");
-    });
-    ws.addEventListener("close", () => {
-      handleClose();
+    };
+    const handleClose = () => {
+      setWsStatus("closed");
       push("WS: closed");
-    });
-    ws.addEventListener("error", () => {
-      handleError();
+    };
+    const handleError = () => {
+      setWsStatus("error");
       push("WS: error");
-    });
+    };
+
+    ws.addEventListener("open", handleOpen);
+    ws.addEventListener("close", handleClose);
+    ws.addEventListener("error", handleError);
 
     return () => {
       ws.removeEventListener("open", handleOpen);
@@ -79,49 +71,6 @@ export function ConnectionStatus({ ws, pc, maxItems = 100 }: Props) {
       ws.removeEventListener("error", handleError);
     };
   }, [ws]);
-
-  useEffect(() => {
-    setPcBase(pc ? pc.connectionState : "n/a");
-    setPcStatusDetail(
-      pc
-        ? `${pc.connectionState} / signaling: ${pc.signalingState} / ice: ${pc.iceConnectionState}`
-        : "n/a"
-    );
-    if (!pc) return;
-
-    const update = () => {
-      const base = pc.connectionState;
-      const msg = `${base} / signaling: ${pc.signalingState} / ice: ${pc.iceConnectionState}`;
-      setPcBase(base);
-      setPcStatusDetail(msg);
-    };
-
-    const onConn = () => {
-      update();
-      push(`PC: connection ${pc.connectionState}`);
-    };
-    const onSig = () => {
-      update();
-      push(`PC: signaling ${pc.signalingState}`);
-    };
-    const onIce = () => {
-      update();
-      push(`PC: ice ${pc.iceConnectionState}`);
-    };
-
-    pc.addEventListener("connectionstatechange", onConn);
-    pc.addEventListener("signalingstatechange", onSig);
-    pc.addEventListener("iceconnectionstatechange", onIce);
-
-    // run once to populate
-    update();
-
-    return () => {
-      pc.removeEventListener("connectionstatechange", onConn);
-      pc.removeEventListener("signalingstatechange", onSig);
-      pc.removeEventListener("iceconnectionstatechange", onIce);
-    };
-  }, [pc]);
 
   // Auto-scroll the feed when new items arrive
   useEffect(() => {
@@ -135,11 +84,6 @@ export function ConnectionStatus({ ws, pc, maxItems = 100 }: Props) {
       <div className="text-neutral-200">
         <span className="font-semibold text-neutral-300">WebSocket:</span>
         <span className={`ml-1 font-medium ${wsColor(wsStatus)}`}>{wsStatus}</span>
-      </div>
-      <div className="text-neutral-200">
-        <span className="font-semibold text-neutral-300">PeerConnection:</span>
-        <span className={`ml-1 font-medium ${pcColor(pcBase)}`}>{pcBase}</span>
-        <span className="ml-2 text-neutral-400">{pcStatusDetail}</span>
       </div>
       <div className="mt-1 max-h-40 overflow-auto rounded-md border border-[#3a3a3a] bg-neutral-800/40" ref={listRef}>
         {feed.length === 0 ? (

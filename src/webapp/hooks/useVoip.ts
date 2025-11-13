@@ -6,7 +6,6 @@ export type UseVoip = {
   peers: VoipPeer[];
   error: string;
   ws: WebSocket | null;
-  pc: RTCPeerConnection | null;
   wsState: number | null;
   local: MediaStream | null;
   connect: () => Promise<void>;
@@ -32,13 +31,14 @@ export function useVoip(): UseVoip {
   const connect = useCallback(async () => {
     setError("");
 
-    const client = (clientRef.current = new VoipClient({
+    const client = new VoipClient({
       onWsStateChange: setWsState,
-      // onPeerStateChange: () => {},
       onError: (m, e) =>
         setError(m + (e instanceof Error ? `: ${e.message}` : "")),
       onPeersChange: setPeers,
-    }));
+    });
+    clientRef.current = client;
+
     try {
       await client.connect();
       const ls = await client.startCall();
@@ -46,7 +46,7 @@ export function useVoip(): UseVoip {
     } catch (err) {
       setError(
         "Failed to start call" +
-          (err instanceof Error ? `: ${err.message}` : "")
+          (err instanceof Error ? `: ${err.message}` : ""),
       );
     }
   }, []);
@@ -57,7 +57,6 @@ export function useVoip(): UseVoip {
     peers,
     error,
     ws: clientRef.current?.socket ?? null,
-    pc: clientRef.current?.peer ?? null,
     wsState,
     local,
     connect,

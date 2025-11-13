@@ -3,11 +3,9 @@ import { ConnectionStatus } from "./components/ConnectionStatus";
 import { useVoip } from "./hooks/useVoip";
 import type { VoipPeer } from "./core/Voip";
 import { PeerIndicator } from "./components/PeerIndicator";
-import { VolumeIndicator } from "./components/VolumeIndicator";
 
 export function Voip() {
-  const { peers, error, ws, pc, wsState, local, connect, disconnect } =
-    useVoip();
+  const { peers, error, ws, wsState, local, connect, disconnect } = useVoip();
 
   return (
     <div className="mt-8 mx-auto w-full max-w-2xl text-left flex flex-col gap-4">
@@ -52,7 +50,7 @@ export function Voip() {
         ))}
       </>
 
-      <ConnectionStatus ws={ws} pc={pc} />
+      <ConnectionStatus ws={ws} />
 
       {error && (
         <div className="rounded-lg border text-rose-400 border-rose-600/40 bg-rose-900/20 text-rose-200 text-sm p-3">

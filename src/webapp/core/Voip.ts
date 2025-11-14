@@ -86,7 +86,16 @@ export class Voip {
   private async startLocalAudio(pc: RTCPeerConnection): Promise<MediaStream> {
     assertVoipCapable();
 
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const stream = await navigator.mediaDevices.getUserMedia({
+audio: {
+        echoCancellation: { ideal: true },
+        noiseSuppression: { ideal: true },
+        autoGainControl: { ideal: true },
+        channelCount: { ideal: 1 },
+        sampleRate: { ideal: 48000 },
+        sampleSize: { ideal: 16 },
+      },
+    });
     stream.getTracks().forEach((t) => pc.addTrack(t, stream));
     this.localStream = stream;
     return stream;

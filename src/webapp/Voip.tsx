@@ -40,7 +40,7 @@ export function Voip() {
       </div>
 
       {(local || peers.length > 0) && (
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-start gap-3">
           {local && (
             <PeerIndicator peer={{ id: "local", stream: local }} label="You" />
           )}

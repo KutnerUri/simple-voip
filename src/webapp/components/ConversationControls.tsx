@@ -41,7 +41,7 @@ export function ConversationControls({
   const muteDisabled = !local || !inCall;
 
   return (
-    <div className="mt-4 rounded-2xl border border-white/12 bg-[#121212]/80 p-4 shadow-xl backdrop-blur-sm">
+    <div className="rounded-2xl border border-white/12 bg-[#121212]/80 p-4 shadow-xl backdrop-blur-sm">
       <div className="flex flex-wrap gap-3">
         <button
           type="button"

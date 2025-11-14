@@ -9,6 +9,8 @@ type Props = {
   onToggleMute: () => void;
   onDisconnect: () => void;
   onOpenSpeaker: () => void;
+  canSelectSpeaker: boolean;
+  speakerLabel: string;
 };
 
 const circleBase =
@@ -25,6 +27,8 @@ const COLORS = {
     disabled: "bg-[#404040] text-[#5b5b5b] border-[#2b2b2b]",
   },
   speaker: {
+    enabled:
+      "bg-[#1a1a1a] text-white border-[#8bf1ff] hover:bg-[#252525]",
     disabled:
       "bg-[#404040] text-[#a7a7a7] border-[#343434] hover:translate-y-0 cursor-not-allowed",
   },
@@ -37,8 +41,11 @@ export function ConversationControls({
   onToggleMute,
   onDisconnect,
   onOpenSpeaker,
+  canSelectSpeaker,
+  speakerLabel,
 }: Props) {
   const muteDisabled = !local || !inCall;
+  const speakerDisabled = !canSelectSpeaker;
 
   return (
     <div className="rounded-2xl border border-white/12 bg-[#121212]/80 p-4 shadow-xl backdrop-blur-sm">
@@ -84,11 +91,29 @@ export function ConversationControls({
         <button
           type="button"
           onClick={onOpenSpeaker}
-          disabled
-          className={[circleBase, COLORS.speaker.disabled].join(" ")}
-          title="Speaker selection coming soon"
+          disabled={speakerDisabled}
+          className={[
+            circleBase,
+            speakerDisabled
+              ? COLORS.speaker.disabled
+              : COLORS.speaker.enabled,
+          ].join(" ")}
+          title={
+            speakerDisabled
+              ? "Speaker selection unavailable"
+              : "Select speaker output"
+          }
         >
-          <span className="text-[0.7rem] font-semibold tracking-wide">SPK</span>
+          <span className="flex flex-col items-center leading-tight">
+            <span className="text-[0.7rem] font-semibold tracking-wide">
+              SPK
+            </span>
+            {/* {speakerLabel && (
+              <span className="text-[0.6rem] font-medium text-white/80">
+                {speakerLabel}
+              </span>
+            )} */}
+          </span>
           <span className="sr-only">Speaker</span>
         </button>
       </div>

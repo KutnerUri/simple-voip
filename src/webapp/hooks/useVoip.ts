@@ -12,7 +12,6 @@ export type UseVoip = {
   connect: () => Promise<void>;
   disconnect: () => void;
   toggleMute: () => void;
-  openSpeakerSelector: () => void;
 };
 
 export function useVoip(): UseVoip {
@@ -69,10 +68,6 @@ export function useVoip(): UseVoip {
     setMuted((prev) => !prev);
   }, []);
 
-  const openSpeakerSelector = useCallback(() => {
-    console.warn("TODO: implement speaker output selection");
-  }, []);
-
   useEffect(() => () => disconnect(), [disconnect]);
 
   return {
@@ -85,6 +80,5 @@ export function useVoip(): UseVoip {
     connect,
     disconnect,
     toggleMute,
-    openSpeakerSelector,
   };
 }

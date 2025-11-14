@@ -1,9 +1,13 @@
+import { useMemo } from "react";
 import { Button } from "./atoms/Button";
 import { ConnectionStatus } from "./components/ConnectionStatus";
 import { useVoip } from "./hooks/useVoip";
 import type { VoipPeer } from "./core/Voip";
 import { PeerIndicator } from "./components/PeerIndicator";
 import { ConversationControls } from "./components/ConversationControls";
+import { useAudioOutputs } from "./hooks/useAudioOutputs";
+import { AudioOutput } from "./components/AudioOutput";
+import { useOutputDeviceSelector } from "./hooks/useOutputDeviceSelector";
 
 export function Voip() {
   const {
@@ -16,8 +20,16 @@ export function Voip() {
     disconnect,
     isMuted,
     toggleMute,
-    openSpeakerSelector,
   } = useVoip();
+
+  const {
+    audioOutputs,
+    isEnumerating: isListingOutputs,
+    supportsOutputSelection,
+  } = useAudioOutputs();
+
+  const { selectedOutputDevice, selectedSinkId, toggleAudio } =
+    useOutputDeviceSelector(audioOutputs);
 
   const inCall = wsState === WebSocket.OPEN;
 
@@ -52,14 +64,10 @@ export function Voip() {
 
       <>
         {peers.map(({ stream }) => (
-          <audio
+          <AudioOutput
             key={stream.id}
-            autoPlay
-            ref={(el) => {
-              if (el && el.srcObject !== stream) {
-                el.srcObject = stream;
-              }
-            }}
+            stream={stream}
+            output={supportsOutputSelection ? selectedOutputDevice : undefined}
           />
         ))}
       </>
@@ -70,8 +78,42 @@ export function Voip() {
         isMuted={isMuted}
         onToggleMute={toggleMute}
         onDisconnect={disconnect}
-        onOpenSpeaker={openSpeakerSelector}
+        onOpenSpeaker={toggleAudio}
+        canSelectSpeaker={supportsOutputSelection && audioOutputs.length > 0}
+        speakerLabel={selectedOutputDevice?.label || ""}
       />
+
+      <div className="rounded-lg border border-slate-500/30 bg-slate-900/20 p-3 text-xs text-slate-200">
+        <div className="mb-1 font-semibold tracking-wide text-slate-400 uppercase">
+          Output devices
+        </div>
+        {isListingOutputs && (
+          <div className="text-slate-400">Scanning for devices…</div>
+        )}
+        {!isListingOutputs && audioOutputs.length === 0 && (
+          <div className="text-slate-400">
+            {supportsOutputSelection
+              ? "No audio outputs are currently available."
+              : "This browser does not expose audio output selection."}
+          </div>
+        )}
+        {!isListingOutputs && audioOutputs.length > 0 && (
+          <ul className="list-disc pl-5">
+            {audioOutputs.map((device) => (
+              <li
+                key={device.deviceId}
+                className={
+                  device.deviceId === selectedSinkId
+                    ? "font-semibold text-white"
+                    : undefined
+                }
+              >
+                {device.label}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       <ConnectionStatus ws={ws} />
 

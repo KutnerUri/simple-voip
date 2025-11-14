@@ -87,7 +87,7 @@ export class Voip {
     assertVoipCapable();
 
     const stream = await navigator.mediaDevices.getUserMedia({
-audio: {
+      audio: {
         echoCancellation: { ideal: true },
         noiseSuppression: { ideal: true },
         autoGainControl: { ideal: true },
